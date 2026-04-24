@@ -2,230 +2,444 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>聽覺功能障礙計算器</title>
 <style>
+/* ═══════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body {
-  height: 100%;
-  overflow: hidden;
+:root {
+  --red:   #c0392b;
+  --red-bg:#fff0f0;
+  --red-b: #8e1f1f;
+  --blue:  #1a5fb4;
+  --blue-bg:#f0f4ff;
+  --blue-b:#0e3d80;
+  --ink:   #111;
+  --muted: #555;
+  --light: #f5f5f0;
+  --white: #fff;
+  --border:#999;
+  --bar:   #333;
 }
+
+html, body { height: 100%; }
 
 body {
   font-family: '標楷體', 'DFKai-SB', 'BiauKai', serif;
-  background: #f5f5f0;
-  color: #111;
-  font-size: 13px;
+  background: var(--light);
+  color: var(--ink);
+  font-size: 14px;
   line-height: 1.5;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
 }
 
-.page-wrap {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  padding: 8px 10px 6px;
-  gap: 6px;
-}
-
-.page-title {
+/* ═══════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════ */
+.page-header {
+  background: var(--bar);
+  color: #fff;
   text-align: center;
-  font-size: 16px;
-  font-weight: bold;
-  letter-spacing: 0.1em;
-  flex-shrink: 0;
+  padding: 10px 16px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
-.page-sub {
-  text-align: center;
-  font-size: 11px;
-  color: #555;
-  flex-shrink: 0;
-}
+.page-title { font-size: 16px; font-weight: bold; letter-spacing: 0.1em; }
+.page-sub   { font-size: 11px; color: #bbb; margin-top: 2px; }
 
-/* Two-column main layout */
+/* ═══════════════════════════════════════
+   DESKTOP: 3-column grid
+   TABLET (landscape): 3-column grid
+   PHONE portrait: stacked single column
+═══════════════════════════════════════ */
+
+/* Default: stacked (mobile portrait) */
 .main-layout {
   display: flex;
-  flex: 1;
-  gap: 8px;
-  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  height: calc(100vh - 58px); /* subtract header */
+  overflow-y: auto;
 }
 
-/* Left column: section ① */
-.col-left {
-  flex: 0 0 auto;
-  width: 340px;
+.col {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  border-right: none;
+  overflow: visible;
 }
 
-/* Right column: sections ②③ + copy */
-.col-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 0;
-  overflow: hidden;
+/* ── Tablet landscape & small desktop (≥ 700px) ── */
+@media (min-width: 700px) {
+  .main-layout {
+    flex-direction: row;
+    overflow: hidden;
+    height: calc(100vh - 58px);
+    padding: 0;
+  }
+  .col {
+    flex: 1;
+    overflow-y: auto;
+    height: 100%;
+    border-right: 2px solid #ccc;
+  }
+  .col:last-child { border-right: none; }
 }
 
+/* ── Desktop (≥ 1100px): wider middle col ── */
+@media (min-width: 1100px) {
+  .col-input { flex: 1.1; }
+  .col-calc  { flex: 1.3; }
+  .col-result{ flex: 0.9; }
+}
+
+/* ═══════════════════════════════════════
+   SECTION PANELS
+═══════════════════════════════════════ */
 .section {
-  background: #fff;
-  border: 2px solid #333;
+  background: var(--white);
+  border-bottom: 2px solid var(--bar);
   flex-shrink: 0;
 }
 
-.section.flex-fill {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+@media (min-width: 700px) {
+  .section {
+    border-bottom: none;
+    border-top: 2px solid var(--bar);
+  }
+  .section:first-child { border-top: none; }
 }
 
 .section-title-bar {
-  background: #333;
+  background: var(--bar);
   color: #fff;
   font-size: 13px;
   font-weight: bold;
-  padding: 4px 10px;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
+  padding: 6px 12px;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-/* ── INPUT TABLE ── */
-.input-table-wrap { overflow-y: auto; flex: 1; min-height: 0; }
-table.input-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.input-table th, table.input-table td { border: 1px solid #999; text-align: center; padding: 0; }
+/* ═══════════════════════════════════════
+   COL 1 — INPUT
+═══════════════════════════════════════ */
+.input-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-.th-ear-right { background:#fff0f0; color:#c0392b; font-size:13px; font-weight:bold; padding:4px 2px; border-bottom:2px solid #c0392b; }
-.th-ear-left  { background:#f0f4ff; color:#1a5fb4; font-size:13px; font-weight:bold; padding:4px 2px; border-bottom:2px solid #1a5fb4; }
-.th-freq-right { color:#c0392b; font-size:12px; font-weight:bold; padding:3px 2px; background:#fff8f8; }
-.th-freq-left  { color:#1a5fb4; font-size:12px; font-weight:bold; padding:3px 2px; background:#f5f8ff; }
+table.input-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+table.input-table th,
+table.input-table td {
+  border: 1px solid var(--border);
+  text-align: center;
+  padding: 0;
+}
+
+.th-ear-right { background:var(--red-bg); color:var(--red); font-size:14px; font-weight:bold; padding:6px 2px; border-bottom:2px solid var(--red); }
+.th-ear-left  { background:var(--blue-bg); color:var(--blue); font-size:14px; font-weight:bold; padding:6px 2px; border-bottom:2px solid var(--blue); }
+.th-freq-right { color:var(--red); font-size:12px; font-weight:bold; padding:3px 1px; background:#fff8f8; }
+.th-freq-left  { color:var(--blue); font-size:12px; font-weight:bold; padding:3px 1px; background:#f5f8ff; }
 
 .db-cell { padding:2px 1px; vertical-align:top; }
-.db-col { display:flex; flex-direction:column; align-items:center; gap:1px; }
+.db-col  { display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px; }
+
 .db-btn {
-  width:100%; min-width:34px; padding:1px 1px;
-  font-family:'標楷體','DFKai-SB',monospace;
-  font-size:12px; text-align:center;
-  border:1px solid #ccc; border-radius:2px;
-  background:#fafafa; color:#333;
-  cursor:pointer; line-height:1.4;
-  transition: background 0.1s, color 0.1s;
+  width: 100%;
+  min-width: 32px;
+  padding: 3px 1px;
+  font-family: '標楷體','DFKai-SB',monospace;
+  font-size: 12px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fafafa;
+  color: #333;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.08s, color 0.08s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.db-btn:hover { background:#ddeeff; border-color:#7bafd4; }
-.right-col .db-btn.selected { background:#c0392b; color:#fff; border-color:#8e1f1f; font-weight:bold; }
-.left-col  .db-btn.selected { background:#1a5fb4; color:#fff; border-color:#0e3d80; font-weight:bold; }
+.db-btn:hover  { background:#ddeeff; border-color:#7bafd4; }
+.db-btn:active { opacity: 0.7; }
+.right-col .db-btn.selected { background:var(--red);  color:#fff; border-color:var(--red-b);  font-weight:bold; }
+.left-col  .db-btn.selected { background:var(--blue); color:#fff; border-color:var(--blue-b); font-weight:bold; }
 
-/* ── CALC ── */
-.calc-body { padding:8px 12px 10px; overflow-y: auto; }
-.calc-block { margin-bottom:10px; }
-.calc-block-title { font-weight:bold; font-size:12px; border-left:4px solid #555; padding-left:6px; margin-bottom:6px; }
-.formula-line { display:flex; align-items:baseline; flex-wrap:wrap; gap:2px; margin-bottom:4px; font-size:13px; }
-.lbl-right { color:#c0392b; font-weight:bold; min-width:80px; font-size:12px; }
-.lbl-left  { color:#1a5fb4; font-weight:bold; min-width:80px; font-size:12px; }
-.vbox { display:inline-block; min-width:34px; text-align:center; border-bottom:1.5px solid #555; padding:0 2px; font-weight:bold; font-size:13px; }
-.vbox.rv { color:#c0392b; }
-.vbox.lv { color:#1a5fb4; }
-.vbox.nv { color:#111; }
-.op { color:#555; font-size:13px; }
-.rate-pair { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px; }
-.rate-half { display:flex; align-items:baseline; flex-wrap:wrap; gap:2px; font-size:13px; flex:1; min-width:180px; }
-.bilateral-box { background:#f8f6f0; border:1.5px solid #bbb; border-radius:4px; padding:7px 10px; }
-.bilateral-formula { display:flex; align-items:baseline; flex-wrap:wrap; gap:3px; font-size:13px; }
-.bilateral-result { display:inline-block; min-width:52px; text-align:center; border-bottom:2px solid #222; font-size:19px; font-weight:bold; padding:0 3px; }
-.tag-b { font-size:10px; background:#1a5fb4; color:#fff; border-radius:3px; padding:0 3px; vertical-align:middle; margin-left:2px; }
-.tag-w { font-size:10px; background:#c0392b; color:#fff; border-radius:3px; padding:0 3px; vertical-align:middle; margin-left:2px; }
+/* ═══════════════════════════════════════
+   COL 2 — CALCULATION
+═══════════════════════════════════════ */
+.calc-body { padding: 12px 14px 14px; }
+.calc-block { margin-bottom: 14px; }
+.calc-block-title {
+  font-weight: bold;
+  font-size: 13px;
+  border-left: 4px solid var(--muted);
+  padding-left: 7px;
+  margin-bottom: 7px;
+  line-height: 1.4;
+}
 
-/* ════ COPY BUTTON ════ */
-#copy-section {
-  background: #fff;
-  border: 2px solid #2a6496;
-  border-radius: 0;
-  padding: 7px 12px;
+.formula-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.lbl-right { color:var(--red);  font-weight:bold; min-width:78px; font-size:13px; }
+.lbl-left  { color:var(--blue); font-weight:bold; min-width:78px; font-size:13px; }
+
+.vbox {
+  display: inline-block;
+  min-width: 34px;
+  text-align: center;
+  border-bottom: 1.5px solid var(--muted);
+  padding: 0 2px;
+  font-weight: bold;
+  font-size: 13px;
+}
+.vbox.rv { color:var(--red); }
+.vbox.lv { color:var(--blue); }
+.vbox.nv { color:var(--ink); }
+.op { color:var(--muted); font-size:13px; }
+
+.rate-pair { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+.rate-half {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 13px;
+  flex: 1;
+  min-width: 180px;
+  background: #fafaf8;
+  border: 1px solid #e0e0d8;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.bilateral-box {
+  background: #f8f6f0;
+  border: 1.5px solid #bbb;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.bilateral-formula {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 13px;
+}
+.bilateral-result {
+  display: inline-block;
+  min-width: 54px;
+  text-align: center;
+  border-bottom: 2px solid var(--ink);
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0 3px;
+}
+.tag-b { font-size:10px; background:var(--blue); color:#fff; border-radius:3px; padding:0 4px; vertical-align:middle; margin-left:2px; white-space:nowrap; }
+.tag-w { font-size:10px; background:var(--red);  color:#fff; border-radius:3px; padding:0 4px; vertical-align:middle; margin-left:2px; white-space:nowrap; }
+
+/* ═══════════════════════════════════════
+   COPY BUTTON — sits between col2 & col3
+   On mobile: between calc and result sections
+   On desktop: top of result column
+═══════════════════════════════════════ */
+.copy-wrap {
+  background: #eef4fb;
+  border-top: 2px solid #2a6496;
+  border-bottom: 2px solid #2a6496;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-#copy-section .copy-desc {
-  font-size: 12px;
-  color: #444;
-  line-height: 1.5;
-  flex: 1;
+
+@media (min-width: 700px) {
+  .copy-wrap {
+    border: none;
+    border-bottom: 1.5px solid #2a6496;
+    background: #eef4fb;
+  }
 }
+
 #copy-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 16px;
+  padding: 9px 18px;
   background: #2a6496;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   font-family: '標楷體','DFKai-SB',serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: bold;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-#copy-btn:hover { background: #1d4f7a; }
-#copy-btn:active { transform: scale(0.97); }
-#copy-btn.copied { background: #2e7d52; }
+#copy-btn:hover  { background:#1d4f7a; }
+#copy-btn:active { opacity:.85; }
+#copy-btn.copied { background:#2e7d52; }
+
+.copy-hint {
+  font-size: 12px;
+  color: #446;
+  line-height: 1.5;
+  flex: 1;
+  min-width: 120px;
+}
+
 #copy-toast {
   display: none;
   font-size: 12px;
   color: #2e7d52;
   font-weight: bold;
-  margin-top: 4px;
   width: 100%;
+  padding-top: 4px;
 }
 #copy-toast.show { display: block; }
 
-/* ── RESULT ── */
-.result-body { padding:8px 12px 10px; overflow-y: auto; flex: 1; min-height: 0; }
-.result-placeholder { color:#999; font-size:12px; font-style:italic; text-align:center; padding:6px 0; }
-.result-item { display:none; gap:8px; padding:8px 10px; border-left:5px solid #888; background:#f7f7f5; border-radius:3px; animation:fadeUp .25s ease; }
-.result-item.show { display:flex; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
-.result-item.lv0 { border-color:#888; background:#f5f5f5; }
+/* ═══════════════════════════════════════
+   COL 3 — RESULT
+═══════════════════════════════════════ */
+.result-body {
+  padding: 12px 14px 16px;
+  min-height: 80px;
+}
+.result-placeholder {
+  color: #999;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  padding: 16px 4px;
+  line-height: 1.8;
+}
+
+.result-item {
+  display: none;
+  gap: 10px;
+  padding: 12px 12px;
+  border-left: 5px solid #888;
+  background: #f7f7f5;
+  border-radius: 3px;
+  animation: fadeUp .25s ease;
+  margin-bottom: 4px;
+}
+.result-item.show { display: flex; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.result-item.lv0 { border-color:#888;    background:#f5f5f5; }
 .result-item.lv1 { border-color:#c9a020; background:#fdf8ec; }
 .result-item.lv2 { border-color:#c0602a; background:#fdf2ec; }
 .result-item.lv3 { border-color:#8e1f1f; background:#fdf0f0; }
-.res-check { width:14px;height:14px;border:2px solid #444;flex-shrink:0;margin-top:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#222;background:#fff; }
-.res-check::after { content:'✓'; }
-.res-content { font-size:13px; line-height:1.6; }
-.res-code { font-weight:bold; font-size:14px; }
-.res-sub { font-size:11px; color:#666; margin-top:2px; }
 
-@media (max-width:520px) {
-  .db-btn { font-size:11px; min-width:26px; }
-  .vbox { min-width:28px; font-size:12px; }
-  .rate-half { min-width:160px; font-size:12px; }
-  #copy-section { flex-direction:column; }
+.res-check {
+  width:16px; height:16px;
+  border:2px solid #444;
+  flex-shrink:0;
+  margin-top:3px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:bold; color:#222;
+  background:#fff;
+}
+.res-check::after { content:'✓'; }
+.res-content { font-size:13px; line-height:1.75; }
+.res-code    { font-weight:bold; font-size:14px; }
+.res-sub     { font-size:11px; color:#666; margin-top:3px; }
+
+/* Bilateral summary card in result col */
+.bilateral-summary {
+  background: var(--bar);
+  color: #fff;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bilateral-summary .label { font-size:12px; color:#ccc; }
+.bilateral-summary .value { font-size:26px; font-weight:bold; color:#f5c518; font-variant-numeric: tabular-nums; }
+.bilateral-summary .pct   { font-size:16px; color:#f5c518; }
+
+/* ═══════════════════════════════════════
+   MOBILE PHONE ADJUSTMENTS
+═══════════════════════════════════════ */
+@media (max-width: 699px) {
+  .page-header { padding: 8px 12px 6px; }
+  .page-title  { font-size: 15px; }
+
+  /* Slightly larger tap targets on phone */
+  .db-btn { padding: 4px 1px; font-size: 12px; min-width: 30px; }
+
+  .formula-line { font-size: 12px; }
+  .vbox { font-size: 12px; min-width: 30px; }
+  .op   { font-size: 12px; }
+  .rate-half { min-width: 140px; font-size: 12px; }
+  .bilateral-formula { font-size: 12px; }
+  .bilateral-result  { font-size: 18px; }
+}
+
+/* Phone landscape: use 3 cols like tablet */
+@media (max-width: 699px) and (orientation: landscape) {
+  .main-layout {
+    flex-direction: row;
+    overflow: hidden;
+    height: calc(100vh - 50px);
+  }
+  .col {
+    flex: 1;
+    overflow-y: auto;
+    height: 100%;
+    border-right: 2px solid #ccc;
+  }
+  .col:last-child { border-right: none; }
+  .db-btn { font-size: 11px; min-width: 26px; padding: 2px 0; }
+  .section-title-bar { font-size: 11px; padding: 4px 8px; }
 }
 </style>
 </head>
 <body>
-<div class="page-wrap">
 
-<div class="page-title">聽覺功能 Hearing Functions</div>
-<div class="page-sub">（本碼建議可用於聽語障礙、顏面傷殘⋯等疾病或障礙）　※請依聽力閾值計算擇一填寫相關數值，並四捨五入填寫至小數點後一位。</div>
+<!-- STICKY HEADER -->
+<div class="page-header">
+  <div class="page-title">聽覺功能障礙計算器 Hearing Functions</div>
+  <div class="page-sub">※依聽力閾值點選分貝數，系統即時計算障礙比率與鑑定結果</div>
+</div>
 
 <div class="main-layout">
 
-  <!-- LEFT COLUMN: ① INPUT -->
-  <div class="col-left">
-    <div class="section flex-fill">
-      <div class="section-title-bar">① 純音聽力閾值輸入（分貝 dB）— 點選各頻率數值</div>
+  <!-- ══ COL 1：INPUT ══ -->
+  <div class="col col-input">
+    <div class="section">
+      <div class="section-title-bar">① 聽力閾值輸入（dB）</div>
       <div class="input-table-wrap">
         <table class="input-table">
           <thead>
@@ -241,96 +455,107 @@ table.input-table th, table.input-table td { border: 1px solid #999; text-align:
     </div>
   </div>
 
-  <!-- RIGHT COLUMN: ② CALC + copy + ③ RESULT -->
-  <div class="col-right">
-
-    <!-- ② CALC -->
+  <!-- ══ COL 2：CALC ══ -->
+  <div class="col col-calc">
     <div class="section">
-      <div class="section-title-bar">② 數值計算（以純音聽力閾值計算）</div>
+      <div class="section-title-bar">② 數值計算</div>
       <div class="calc-body">
 
-    <div class="calc-block">
-      <div class="calc-block-title">1. 平均聽力閾值 PTA = （500 Hz + 1kHz + 2kHz + 4kHz）÷ 4</div>
-      <div class="formula-line">
-        <span class="lbl-right">PTA 右耳 =（</span>
-        <span class="vbox rv" id="d-r-500">＿</span><span class="op">+</span>
-        <span class="vbox rv" id="d-r-1000">＿</span><span class="op">+</span>
-        <span class="vbox rv" id="d-r-2000">＿</span><span class="op">+</span>
-        <span class="vbox rv" id="d-r-4000">＿</span>
-        <span class="op">）÷ 4 =</span>
-        <span class="vbox rv" id="d-r-pta">＿</span><span class="op">分貝</span>
-      </div>
-      <div class="formula-line">
-        <span class="lbl-left">PTA 左耳 =（</span>
-        <span class="vbox lv" id="d-l-500">＿</span><span class="op">+</span>
-        <span class="vbox lv" id="d-l-1000">＿</span><span class="op">+</span>
-        <span class="vbox lv" id="d-l-2000">＿</span><span class="op">+</span>
-        <span class="vbox lv" id="d-l-4000">＿</span>
-        <span class="op">）÷ 4 =</span>
-        <span class="vbox lv" id="d-l-pta">＿</span><span class="op">分貝</span>
+        <div class="calc-block">
+          <div class="calc-block-title">1. 平均聽力閾值 PTA = (500+1k+2k+4k) ÷ 4</div>
+          <div class="formula-line">
+            <span class="lbl-right">PTA 右耳＝（</span>
+            <span class="vbox rv" id="d-r-500">＿</span><span class="op">+</span>
+            <span class="vbox rv" id="d-r-1000">＿</span><span class="op">+</span>
+            <span class="vbox rv" id="d-r-2000">＿</span><span class="op">+</span>
+            <span class="vbox rv" id="d-r-4000">＿</span>
+            <span class="op">）÷4＝</span>
+            <span class="vbox rv" id="d-r-pta">＿</span><span class="op">dB</span>
+          </div>
+          <div class="formula-line">
+            <span class="lbl-left">PTA 左耳＝（</span>
+            <span class="vbox lv" id="d-l-500">＿</span><span class="op">+</span>
+            <span class="vbox lv" id="d-l-1000">＿</span><span class="op">+</span>
+            <span class="vbox lv" id="d-l-2000">＿</span><span class="op">+</span>
+            <span class="vbox lv" id="d-l-4000">＿</span>
+            <span class="op">）÷4＝</span>
+            <span class="vbox lv" id="d-l-pta">＿</span><span class="op">dB</span>
+          </div>
+        </div>
+
+        <div class="calc-block">
+          <div class="calc-block-title">2. 單耳聽障比率（超過100%以100%計）</div>
+          <div class="rate-pair">
+            <div class="rate-half">
+              <span class="op">（PTA右</span>
+              <span class="vbox rv" id="d-r-pta2" style="min-width:30px">＿</span>
+              <span class="op">－25）×1.5%＝</span>
+              <span class="vbox rv" id="d-r-rate" style="min-width:40px">＿</span>
+              <span class="op">%</span>
+            </div>
+            <div class="rate-half">
+              <span class="op">（PTA左</span>
+              <span class="vbox lv" id="d-l-pta2" style="min-width:30px">＿</span>
+              <span class="op">－25）×1.5%＝</span>
+              <span class="vbox lv" id="d-l-rate" style="min-width:40px">＿</span>
+              <span class="op">%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-block">
+          <div class="calc-block-title">3. 雙耳整體障礙比率</div>
+          <div class="bilateral-box">
+            <div class="bilateral-formula">
+              <span class="op">（優耳</span>
+              <span class="vbox nv" id="d-better-rate" style="min-width:40px">＿</span>
+              <span id="d-better-tag"></span>
+              <span class="op">%×5＋劣耳</span>
+              <span class="vbox nv" id="d-worse-rate" style="min-width:40px">＿</span>
+              <span id="d-worse-tag"></span>
+              <span class="op">%×1）÷6＝</span>
+              <span class="bilateral-result" id="d-bilateral">＿</span>
+              <span style="font-size:16px;font-weight:bold"> %</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-
-    <div class="calc-block">
-      <div class="calc-block-title">2. 單耳聽障比率（超過 100% 以 100% 計算）</div>
-      <div class="rate-pair">
-        <div class="rate-half">
-          <span class="op">（PTA 右耳</span>
-          <span class="vbox rv" id="d-r-pta2" style="min-width:34px">＿</span>
-          <span class="op">− 25）× 1.5% =</span>
-          <span class="vbox rv" id="d-r-rate" style="min-width:46px">＿</span>
-          <span class="op">%</span>
-        </div>
-        <div class="rate-half">
-          <span class="op">（PTA 左耳</span>
-          <span class="vbox lv" id="d-l-pta2" style="min-width:34px">＿</span>
-          <span class="op">− 25）× 1.5% =</span>
-          <span class="vbox lv" id="d-l-rate" style="min-width:46px">＿</span>
-          <span class="op">%</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="calc-block">
-      <div class="calc-block-title">3. 雙耳整體障礙比率 = （優耳聽障比率 × 5 ＋ 劣耳聽障比率 × 1）÷ 6</div>
-      <div class="bilateral-box">
-        <div class="bilateral-formula">
-          <span class="op">（優耳</span>
-          <span class="vbox nv" id="d-better-rate" style="min-width:44px">＿</span>
-          <span id="d-better-tag"></span>
-          <span class="op">% × 5 ＋ 劣耳</span>
-          <span class="vbox nv" id="d-worse-rate" style="min-width:44px">＿</span>
-          <span id="d-worse-tag"></span>
-          <span class="op">% × 1）÷ 6 =</span>
-          <span class="bilateral-result" id="d-bilateral">＿</span>
-          <span style="font-size:18px;font-weight:bold"> %</span>
-        </div>
-      </div>
-    </div>
-
   </div>
-    </div><!-- /② CALC -->
 
-    <!-- 📋 COPY REPORT -->
-    <div id="copy-section">
-      <div class="copy-desc">
-        📄 <strong>複製報告</strong>　將聽力閾值、障礙比率、整體障礙比率及鑑定結果複製為純文字，可直接貼入記事本或病歷文件。
-      </div>
+  <!-- ══ COL 3：RESULT ══ -->
+  <div class="col col-result">
+
+    <!-- Copy button at top of result col -->
+    <div class="copy-wrap">
+      <div class="copy-hint">📄 複製完整報告<br>可貼入記事本或病歷</div>
       <div>
-        <button id="copy-btn" onclick="copyReport()">
-          📋 複製報告至剪貼簿
-        </button>
-        <div id="copy-toast">✅ 已複製！請開啟記事本按 Ctrl+V 貼上。</div>
+        <button id="copy-btn" onclick="copyReport()">📋 複製報告</button>
+        <div id="copy-toast">✅ 已複製！請按 Ctrl+V 貼上。</div>
       </div>
     </div>
 
-    <!-- ③ RESULT -->
-    <div class="section flex-fill">
-      <div class="section-title-bar">③ 鑑定結果（需完整輸入八個頻率數值後顯示）</div>
+    <div class="section">
+      <div class="section-title-bar">③ 鑑定結果</div>
       <div class="result-body">
-        <div class="result-placeholder" id="res-placeholder">
-          請完整輸入右耳與左耳各四個頻率的數值，計算完成後將顯示對應鑑定結果。
+
+        <!-- Bilateral summary mini-card -->
+        <div class="bilateral-summary">
+          <div>
+            <div class="label">雙耳整體障礙比率</div>
+            <div class="label" id="sum-better-worse" style="font-size:11px;margin-top:2px;color:#aaa"></div>
+          </div>
+          <div>
+            <span class="value" id="sum-bilateral">—</span>
+            <span class="pct"> %</span>
+          </div>
         </div>
+
+        <div class="result-placeholder" id="res-placeholder">
+          請完整輸入左右耳<br>各四個頻率數值
+        </div>
+
         <div class="result-item lv0" id="res-b0">
           <div class="res-check"></div>
           <div class="res-content">
@@ -341,7 +566,7 @@ table.input-table th, table.input-table td { border: 1px solid #999; text-align:
         <div class="result-item lv1" id="res-b1">
           <div class="res-check"></div>
           <div class="res-content">
-            <span class="res-code">b230.1：</span>六歲以上：雙耳整體障礙比率介於 45.0% 至 70.0%，或一耳聽力閾值超過 90 分貝（含）以上，且另一耳聽力閾值超過 48 分貝（含）以上者。
+            <span class="res-code">b230.1：</span>六歲以上：雙耳整體障礙比率介於 45.0% 至 70.0%。
             <div class="res-sub" id="res-b1-sub"></div>
           </div>
         </div>
@@ -359,13 +584,12 @@ table.input-table th, table.input-table td { border: 1px solid #999; text-align:
             <div class="res-sub" id="res-b3-sub"></div>
           </div>
         </div>
+
       </div>
-    </div><!-- /③ RESULT -->
+    </div>
+  </div>
 
-  </div><!-- /col-right -->
 </div><!-- /main-layout -->
-
-</div><!-- /page-wrap -->
 
 <script>
 const FREQS = [500, 1000, 2000, 4000];
@@ -433,7 +657,6 @@ function setEl(id, val, suf='') {
   if (el) el.textContent = (val === null || val === undefined) ? '＿' : val + suf;
 }
 
-// Cached computed values for copy
 let _cache = {};
 
 function update() {
@@ -446,9 +669,9 @@ function update() {
     setEl(`d-r-${f}`, state.right[f]);
     setEl(`d-l-${f}`, state.left[f]);
   });
-  setEl('d-r-pta', rPTA);  setEl('d-r-pta2', rPTA);
-  setEl('d-l-pta', lPTA);  setEl('d-l-pta2', lPTA);
-  setEl('d-r-rate', rRate); setEl('d-l-rate', lRate);
+  setEl('d-r-pta',  rPTA);  setEl('d-r-pta2', rPTA);
+  setEl('d-l-pta',  lPTA);  setEl('d-l-pta2', lPTA);
+  setEl('d-r-rate', rRate); setEl('d-l-rate',  lRate);
 
   let betterRate = null, worseRate = null, betterSide = '', worseSide = '';
   if (rRate !== null && lRate !== null) {
@@ -466,13 +689,23 @@ function update() {
   document.getElementById('d-better-tag').innerHTML =
     betterRate !== null ? `<span class="tag-b">優耳${betterSide}</span>` : '';
   document.getElementById('d-worse-tag').innerHTML =
-    worseRate !== null ? `<span class="tag-w">劣耳${worseSide}</span>` : '';
+    worseRate !== null  ? `<span class="tag-w">劣耳${worseSide}</span>`  : '';
 
-  const bilateral = (betterRate !== null)
+  const bilateral = betterRate !== null
     ? r1((betterRate * 5 + worseRate) / 6) : null;
   setEl('d-bilateral', bilateral);
 
-  // Cache for copy
+  // Summary card in col3
+  const sumEl = document.getElementById('sum-bilateral');
+  const sumBW = document.getElementById('sum-better-worse');
+  if (bilateral !== null) {
+    sumEl.textContent = bilateral;
+    sumBW.textContent = `優耳${betterSide} ${betterRate}%，劣耳${worseSide} ${worseRate}%`;
+  } else {
+    sumEl.textContent = '—';
+    sumBW.textContent = '';
+  }
+
   _cache = { rPTA, lPTA, rRate, lRate, betterRate, worseRate, betterSide, worseSide, bilateral };
 
   // Section 3
@@ -483,21 +716,14 @@ function update() {
 
   if (!allDone || bilateral === null) return;
 
-  const specialB1 = (rPTA !== null && lPTA !== null) &&
-    ((rPTA >= 90 && lPTA >= 48) || (lPTA >= 90 && rPTA >= 48));
-
   if (bilateral < 45.0) {
     document.getElementById('res-b0').classList.add('show');
     document.getElementById('res-b0-sub').textContent =
       `雙耳整體障礙比率 ${bilateral}%，未達 45.0%。`;
-  } else if ((bilateral >= 45.0 && bilateral <= 70.0) || specialB1) {
+  } else if (bilateral >= 45.0 && bilateral <= 70.0) {
     document.getElementById('res-b1').classList.add('show');
-    let sub = `雙耳整體障礙比率 ${bilateral}%，介於 45.0% 至 70.0%。`;
-    if (specialB1 && !(bilateral >= 45.0 && bilateral <= 70.0))
-      sub = `符合特殊條件：一耳 PTA ${Math.max(rPTA, lPTA)} dB（≥90）、另一耳 PTA ${Math.min(rPTA, lPTA)} dB（≥48）。`;
-    else if (specialB1)
-      sub += ` 同時符合一耳≥90 dB、另一耳≥48 dB 之條件。`;
-    document.getElementById('res-b1-sub').textContent = sub;
+    document.getElementById('res-b1-sub').textContent =
+      `雙耳整體障礙比率 ${bilateral}%，介於 45.0% 至 70.0%。`;
   } else if (bilateral > 70.0 && bilateral <= 90.0) {
     document.getElementById('res-b2').classList.add('show');
     document.getElementById('res-b2-sub').textContent =
@@ -515,18 +741,16 @@ function copyReport() {
   const d = (v, suf='') => (v === null || v === undefined) ? '（未輸入）' : `${v}${suf}`;
 
   const freqLine = (side, label) =>
-    `  ${label}：500 Hz=${d(state[side][500],' dB')}，` +
-    `1K Hz=${d(state[side][1000],' dB')}，` +
-    `2K Hz=${d(state[side][2000],' dB')}，` +
-    `4K Hz=${d(state[side][4000],' dB')}`;
+    `  ${label}：500Hz=${d(state[side][500],'dB')}，` +
+    `1KHz=${d(state[side][1000],'dB')}，` +
+    `2KHz=${d(state[side][2000],'dB')}，` +
+    `4KHz=${d(state[side][4000],'dB')}`;
 
   let resultText = '（需完整輸入八個頻率數值）';
   if (allDone && bilateral !== null) {
-    const specialB1 = (rPTA !== null && lPTA !== null) &&
-      ((rPTA >= 90 && lPTA >= 48) || (lPTA >= 90 && rPTA >= 48));
     if (bilateral < 45.0)
       resultText = 'b230.0：未達下列基準。';
-    else if ((bilateral >= 45.0 && bilateral <= 70.0) || specialB1)
+    else if (bilateral >= 45.0 && bilateral <= 70.0)
       resultText = 'b230.1：六歲以上：雙耳整體障礙比率介於 45.0% 至 70.0%。';
     else if (bilateral > 70.0 && bilateral <= 90.0)
       resultText = 'b230.2：雙耳整體障礙比率介於 70.1% 至 90.0%。';
@@ -537,7 +761,7 @@ function copyReport() {
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
 
-  const lines = [
+  const text = [
     `══════════════════════════════════`,
     `  聽覺功能障礙計算報告`,
     `  產出日期：${dateStr}`,
@@ -562,15 +786,13 @@ function copyReport() {
     `【四、雙耳整體障礙比率】`,
     bilateral !== null
       ? `  （${betterRate}% × 5 + ${worseRate}% × 1）÷ 6 = ${bilateral}%`
-      : `  （資料不完整，請輸入全部數值）`,
+      : `  （資料不完整）`,
     ``,
     `【五、鑑定結果】`,
     `  ${resultText}`,
     ``,
     `══════════════════════════════════`,
-  ];
-
-  const text = lines.join('\n');
+  ].join('\n');
 
   const doAfterCopy = () => {
     const btn = document.getElementById('copy-btn');
@@ -580,13 +802,14 @@ function copyReport() {
     toast.classList.add('show');
     setTimeout(() => {
       btn.classList.remove('copied');
-      btn.textContent = '📋 複製報告至剪貼簿';
+      btn.textContent = '📋 複製報告';
       toast.classList.remove('show');
     }, 3000);
   };
 
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(doAfterCopy).catch(() => fallbackCopy(text, doAfterCopy));
+    navigator.clipboard.writeText(text).then(doAfterCopy)
+      .catch(() => fallbackCopy(text, doAfterCopy));
   } else {
     fallbackCopy(text, doAfterCopy);
   }
@@ -597,10 +820,9 @@ function fallbackCopy(text, cb) {
   ta.value = text;
   ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
   document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
+  ta.focus(); ta.select();
   try { document.execCommand('copy'); cb(); }
-  catch(e) { alert('請手動選取以下文字複製：\n\n' + text); }
+  catch(e) { alert('請手動複製：\n\n' + text); }
   document.body.removeChild(ta);
 }
 
